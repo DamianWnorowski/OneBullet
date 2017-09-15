@@ -1,0 +1,92 @@
+<!doctype html>
+<style>*{padding:0; margin: 0}</style>
+<html>
+    
+<head>
+    <meta charset="utf-8">
+    <title>Hello World</title>
+</head>
+    <script src="pixi.min.js"></script>
+    <body>
+        <script type="text/javascript">
+                       
+   
+            var Container = PIXI.Container,
+                autoDetectRenderer = PIXI.autoDetectRenderer,
+                loader = PIXI.loader,
+                resources = PIXI.loader.resources,
+                Sprite = PIXI.Sprite,
+                Texture = PIXI.Texture,
+                TextureCache = PIXI.utils.TextureCache; 
+            
+            
+            
+            var stage = new Container(),
+                renderer = autoDetectRenderer(512,512);
+
+            document.body.appendChild(renderer.view);
+            
+            loader
+                .add("treasureHunter.json")
+                .load(setup);
+            
+            
+            
+            
+            var dungeon, explorer, treasure, door, id;
+            
+            function setup(){
+                
+                var dungeonTexture = TextureCache["dungeon.png"];
+                dungeon = new Sprite(dungeonTexture);
+                stage.addChild(dungeon);
+                
+                explorer = new Sprite(resources["treasureHunter.json"].textures["explorer.png"]);
+                explorer.x = 68;
+                
+                explorer.y = stage.height / 2 - explorer.height / 2;
+                stage.addChild(explorer);
+                
+                id = loader.resources["treasureHunter.json"].textures;
+                
+                treasure = new Sprite(id["treasure.png"]);
+                stage.addChild(treasure);
+                
+                treasure.x = stage.width - treasure.width - 48;
+                treasure.y = stage.height /2 - treasure.height / 2;
+                stage.addChild(treasure);
+                
+                door = new Sprite(id["door.png"]);
+                door.position.set(32,0);
+                stage.addChild(door);
+                
+                var numberOfBlocks = 6,
+                    spacing = 48,
+                    xOffset = 150;
+                
+                for(var i = 0; i < numberOfBlocks; i++){
+                    var blob = new Sprite(id["blob.png"]);
+                    
+                    var x = spacing * i + xOffset;
+                    var y = randomInt(0,stage.height - blob.height);
+                    
+                    blob.x = x;
+                    blob.y = y;
+                    
+                    stage.addChild(blob);
+                    
+                }
+                
+                
+                renderer.render(stage);
+            }
+            function randomInt(min,max){
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+            
+            
+            
+            
+        </script>
+    </body>
+</html>

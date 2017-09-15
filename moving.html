@@ -1,0 +1,106 @@
+<!doctype html>
+<style>*{padding:0; margin: 0}</style>
+<html>
+    
+<head>
+    <meta charset="utf-8">
+    <title>Hello World</title>
+</head>
+    <script src="pixi.min.js"></script>
+    <body>
+        <script type="text/javascript">
+                       
+            //Aliases
+            var Container = PIXI.Container,
+                autoDetectRenderer = PIXI.autoDetectRenderer,
+                loader = PIXI.loader,
+                resources = PIXI.loader.resources,
+                Sprite = PIXI.Sprite;
+
+            //Create a Pixi stage and renderer 
+            var stage = new Container(),
+                renderer = autoDetectRenderer(256, 256);
+            document.body.appendChild(renderer.view);
+
+            //Load an image and the run the `setup` function
+            loader
+              .add("mario.png")
+              .load(setup);
+
+            //Define any variables that are used in more than one function
+            var cat, state;
+
+            function setup() {
+
+              //Create the `cat` sprite 
+              cat = new Sprite(resources["mario.png"].texture);
+              cat.y = 96; 
+              cat.vx = 0;
+              cat.vy = 0;
+              stage.addChild(cat);
+
+              //Set the game state
+              state = play;
+
+              //Start the game loop
+              gameLoop();
+            }
+            
+            function keyboard(keyCode) {
+              var key = {};
+              key.code = keyCode;
+              key.isDown = false;
+              key.isUp = true;
+              key.press = undefined;
+              key.release = undefined;
+              //The `downHandler`
+              key.downHandler = function(event) {
+                if (event.keyCode === key.code) {
+                  if (key.isUp && key.press) key.press();
+                  key.isDown = true;
+                  key.isUp = false;
+                }
+                event.preventDefault();
+              };
+
+              //The `upHandler`
+              key.upHandler = function(event) {
+                if (event.keyCode === key.code) {
+                  if (key.isDown && key.release) key.release();
+                  key.isDown = false;
+                  key.isUp = true;
+                }
+                event.preventDefault();
+              };
+
+              //Attach event listeners
+              window.addEventListener(
+                "keydown", key.downHandler.bind(key), false
+              );
+              window.addEventListener(
+                "keyup", key.upHandler.bind(key), false
+              );
+              return key;
+            }
+
+            function gameLoop(){
+
+              //Loop this function 60 times per second
+              requestAnimationFrame(gameLoop);
+
+              //Move the cat 1 pixel per frame
+              state();
+
+              //Render the stage
+              renderer.render(stage);
+            }
+            
+            function play(){
+                cat.vx = 1
+                cat.x += cat.vx;
+            }
+            
+            
+        </script>
+    </body>
+</html>

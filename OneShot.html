@@ -1,0 +1,286 @@
+<!doctype html>
+<style>*{padding:0; margin: 0}</style>
+<html>
+    
+<head>
+    <meta charset="utf-8">
+    <title>Hello World</title>
+</head>
+    <script src="pixi.min.js"></script>
+    <body>
+        <script type="text/javascript">
+            //Aliases
+            var Container = PIXI.Container,
+                autoDetectRenderer = PIXI.autoDetectRenderer,
+                loader = PIXI.loader,
+                resources = PIXI.loader.resources,
+                TextureCache = PIXI.utils.TextureCache,
+                Texture = PIXI.Texture,
+                Text = PIXI.Text,
+                Graphics = PIXI.Graphics,
+                Sprite = PIXI.Sprite;
+        
+            var bullet = {
+                x:0,
+                y:0,
+                xv:1,
+                yv:1,
+                bounce: 0
+            };
+            
+            var message = new Text("heesdfsdflo", {fontFamily: "Arial", fontSize: 32, fill: "white"}
+            );
+            message.position.set(50,256);
+            
+            var bullets = [],
+                boxes = [],
+                targets = [];
+            
+            var state,
+                shoot,
+                angleGun,
+                stage = new Container(),
+                renderer = autoDetectRenderer(512,512);
+            
+            document.body.appendChild(renderer.view);
+
+            
+        
+            loader
+                .add("mario.png")
+                .load(setup);
+
+                
+
+            function setup(){
+                var leftWall = new Graphics(),
+                    topWall = new Graphics(),
+                    rightWall = new Graphics(),
+                    bottomWall = new Graphics(),
+                    tracePath = new Graphics(),
+                    gun = new Graphics();
+
+                var path;
+                
+                leftWall.beginFill(0x66CCFF);
+                leftWall.drawRect(0,0,10,512);
+                leftWall.endFill();
+
+                
+                rightWall.beginFill(0x66CCFF);
+                rightWall.drawRect(502,0,10,512);
+                rightWall.endFill();
+                
+                topWall.beginFill(0x66CCFF);
+                topWall.drawRect(0,0,512,10);
+                topWall.endFill();
+                topWall.xpos = 0;
+                topWall.ypos = 0;
+                
+                bottomWall.beginFill(0x66CCFF);
+                bottomWall.drawRect(0,510,512,2);
+                bottomWall.endFill();
+
+                
+                gun.lineStyle(10,0xFFFFFF,1);
+                gun.moveTo(256,520);
+                gun.lineTo(256,482);
+
+
+                // createTarget(150,150);
+                // createTarget(300,300);
+
+                
+                
+
+                document.body.addEventListener("mousemove", function (e){
+
+                    angleGun = (Math.atan2((512 - e.clientY) ,(256 - e.clientX )));
+                    path =  new createPath(256, 512, angleGun, 10);
+                    path = getPathHits(path);
+                    console.log("angle: " + path.angle);
+                    tracePath.clear();
+                    tracePath.lineStyle(2, 0xFF0000, 1);
+                    tracePath.moveTo(256,512);
+                    path.cords.forEach(function(cord){
+                        tracePath.lineTo(cord.xpos, cord.ypos);
+                    });
+
+                    gun.clear();
+                    gun.lineStyle(10,0xFFFFFF,1);
+                    gun.moveTo(256,520);
+                    gun.lineTo(256 - (30 * Math.cos(angleGun)) , 512 - (30 * Math.sin(angleGun))); 
+
+                });
+                
+                document.body.addEventListener("click", function (e){
+                    var angleBullet = (Math.atan2((512 - e.clientY) ,(256 - e.clientX )));
+                    var bullet = new Graphics();
+                   
+
+                    bullet.beginFill(0x239569);
+                    bullet.drawRect(0 , 0, 10, 10);
+                    bullet.x= 256 - (30 * Math.cos(angleBullet));
+                    bullet.y = 512 - (30 * Math.sin(angleBullet));
+                    bullet.xv = (Math.cos(angleBullet));
+                    bullet.yv = (Math.sin(angleBullet));
+                    bullet.bounce = 10;
+                    bullet.endFill();
+                      
+                    bullets.push(bullet);
+                    stage.addChild(bullet);
+                });
+
+                stage.addChild(leftWall);
+                stage.addChild(rightWall);
+                stage.addChild(topWall);
+                stage.addChild(bottomWall);
+                stage.addChild(gun);
+                stage.addChild(message);
+                stage.addChild(tracePath);
+
+                renderer.render(stage);
+
+                gameLoop();
+            }
+            function createTarget(x ,y){   
+                var target = new Sprite(resources["mario.png"].texture);
+                target.x = x;
+                target.y = y;
+                targets.push(target);
+                stage.addChild(target);
+            }
+            
+            function gameLoop(){
+                requestAnimationFrame(gameLoop);
+                bullets.forEach(function(bullet){
+                    hitTarget(bullet);
+                    if(bullet.bounce > 0){
+                        bullet.x -= (10 * bullet.xv);
+                        bullet.y -= (10 * bullet.yv);
+                        hitWall(bullet);
+                    }else{
+                        bullet.clear();
+                    }
+                });
+                renderer.render(stage); 
+            }
+
+            function createPath(xpos, ypos, angle, bounce){
+                this.xpos = xpos;
+                this.ypos = ypos;
+                this.xv = Math.cos(angle);
+                this.yv = Math.sin(angle);
+                this.angle = angle;
+                this.bounce = bounce;
+                this.cords = [];
+            }
+            
+            function getPathHits(path){
+                console.log("no bounce: " + path.bounce);
+                var hit = false;
+                while(path.bounce > 0){
+                    if(path.xpos < 10 || path.xpos > 492){
+                        path.bounce--;
+                        path.xv *= -1;
+                        var cord = {
+                            xpos: path.xpos,
+                            ypos: path.ypos
+                        }
+                        path.cords.push(cord);
+                        // console.log("hit side\nx: " +path.xpos +  "\ny: " + path.ypos);
+                         hit = true;
+                    }
+                    if(path.ypos < 10 || path.ypos > 512){
+                        path.bounce--;
+                        path.yv *= -1;  
+                        var cord = {
+                            xpos: path.xpos,
+                            ypos: path.ypos
+                        }
+                        path.cords.push(cord);             
+                        // console.log("hit top\nx: " +path.xpos +  "\ny: " + path.ypos);
+                        hit = true;
+                    } 
+                    path.xpos -= (10 * path.xv); 
+                    path.ypos -= (10 * path.yv);             
+                }
+                return path;
+                // path.cords.forEach(function(cord){
+                //     console.log("cord x: " + cord.xpos + " y: " + cord.ypos);
+                // });
+                
+            }
+            
+            function hitTarget(bullet){
+                var hit, totalWidth, totalHeight, centerWidth, centerHeight;
+                var deleteIndex = 0;
+                message.text = targets.length;
+                targets.forEach(function(target){
+                    if((bullet.y  + bullet.width) > target.y && 
+                        bullet.y < (target.y + target.height) && 
+                        (bullet.x + bullet.width) > target.x && 
+                        bullet.x < (target.x + target.width)){
+                            stage.removeChild(target);
+                            targets.splice(deleteIndex, 1);
+                    }else{
+                        deleteIndex++;
+                    }
+                });
+            }
+
+            
+            
+           
+
+            function hitWall(bullet) {
+                var hit = false;
+                if(bullet.x < 10 || bullet.x > 492){
+                    bullet.bounce--;
+                    bullet.xv *= -1;
+                    // hit = true;
+                }
+                if(bullet.y < 10 || bullet.y > 512){
+                    bullet.bounce--;
+                    bullet.yv *= -1;
+                    // hit = true;
+                }         
+            }
+            // function bulletPath(angle, trace){
+            //     trace.clear();
+            //     var toDegree = angle * 180 / Math.PI;
+            //     var rad = ((90 * Math.PI) / 180);                
+            //     trace.lineStyle(2,0xFF0000,1);
+            //     trace.moveTo(256,512);
+
+            //     var x2;
+
+                
+                
+
+            //     var pathToSides = Math.sqrt(((Math.pow(246, 2)) + (Math.pow(246 * Math.tan(angle), 2))));
+            //     var pathToTop = Math.sqrt(Math.pow(512, 2) + (Math.pow(512 / Math.tan(angle), 2)));
+
+
+            //     if(toDegree > 64 && toDegree < 116){
+            //         trace.lineTo(256 - (pathToTop * Math.cos(angle)) , 10);
+                    
+            //     }else if(angle > 2){
+            //         trace.lineTo(256 - (pathToSides * Math.cos(angle)) , 512 - (pathToSides * Math.sin(angle)));
+            //         x2 = (512 -   (pathToSides * Math.sin(angle))) * Math.tan(rad - angle);
+            //         trace.lineTo(502  +  x2, 10 );
+            //         var x3 = 512 + (502 + x2)  * Math.tan(angle) ;
+            //         trace.lineTo(10 ,512 - x3);
+            //         message.text =512 + (502 + x2)  * Math.tan(angle) ;
+            //     }else{
+            //         trace.lineTo(256 - (pathToSides * Math.cos(angle)) , 512 - (pathToSides * Math.sin(angle)));
+            //         x2 = (512 - (pathToSides * Math.sin(angle))) * Math.tan(rad - angle);
+            //         trace.lineTo(( 512 - (pathToSides * Math.sin(angle))) * Math.tan(rad - angle), 10 );
+            //         trace.lineTo(502 , (512 - x2)  * Math.tan(angle) );
+            //         message.text = angle;
+            //     }
+            // }
+            
+        </script>
+    </body>
+</html>
