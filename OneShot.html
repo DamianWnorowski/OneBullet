@@ -7,6 +7,7 @@
     <title>Hello World</title>
 </head>
     <script src="pixi.min.js"></script>
+    <script src="bump.js"></script>
     <body>
         <script type="text/javascript">
             //Aliases
@@ -86,19 +87,18 @@
                 gun.moveTo(256,520);
                 gun.lineTo(256,482);
 
+                createWalls(50,50,50,50);
+                createWalls(150,150,50,50);
+                createWalls(250,250,50,50);
+                createWalls(350,350,50,50);
+                createTarget(50,50);
 
-                // createTarget(150,150);
-                // createTarget(300,300);
-
-                
-                
 
                 document.body.addEventListener("mousemove", function (e){
 
                     angleGun = (Math.atan2((512 - e.clientY) ,(256 - e.clientX )));
                     path =  new createPath(256, 512, angleGun, 10);
                     path = getPathHits(path);
-                    console.log("angle: " + path.angle);
                     tracePath.clear();
                     tracePath.lineStyle(2, 0xFF0000, 1);
                     tracePath.moveTo(256,512);
@@ -143,10 +143,24 @@
 
                 gameLoop();
             }
+
+            function createWalls(x,y,w,h){
+                var box = new Graphics();
+                box.beginFill(0xF6CCFF);
+                box.drawRect(x,y,w,h);
+                box.xpos = x;
+                box.ypos = y;
+                box.endFill();
+
+                boxes.push(box);
+                stage.addChild(box);
+            }
+
             function createTarget(x ,y){   
                 var target = new Sprite(resources["mario.png"].texture);
                 target.x = x;
                 target.y = y;
+                console.log("mnari: " + target.height);
                 targets.push(target);
                 stage.addChild(target);
             }
@@ -155,10 +169,12 @@
                 requestAnimationFrame(gameLoop);
                 bullets.forEach(function(bullet){
                     hitTarget(bullet);
+                    hitBox(bullet);
+                    hitWall(bullet);
                     if(bullet.bounce > 0){
                         bullet.x -= (10 * bullet.xv);
                         bullet.y -= (10 * bullet.yv);
-                        hitWall(bullet);
+                        
                     }else{
                         bullet.clear();
                     }
@@ -177,8 +193,6 @@
             }
             
             function getPathHits(path){
-                console.log("no bounce: " + path.bounce);
-                var hit = false;
                 while(path.bounce > 0){
                     if(path.xpos < 10 || path.xpos > 492){
                         path.bounce--;
@@ -188,7 +202,6 @@
                             ypos: path.ypos
                         }
                         path.cords.push(cord);
-                        // console.log("hit side\nx: " +path.xpos +  "\ny: " + path.ypos);
                          hit = true;
                     }
                     if(path.ypos < 10 || path.ypos > 512){
@@ -199,17 +212,11 @@
                             ypos: path.ypos
                         }
                         path.cords.push(cord);             
-                        // console.log("hit top\nx: " +path.xpos +  "\ny: " + path.ypos);
-                        hit = true;
                     } 
-                    path.xpos -= (10 * path.xv); 
-                    path.ypos -= (10 * path.yv);             
+                    path.xpos -= (1 * path.xv); 
+                    path.ypos -= (1 * path.yv);             
                 }
-                return path;
-                // path.cords.forEach(function(cord){
-                //     console.log("cord x: " + cord.xpos + " y: " + cord.ypos);
-                // });
-                
+                return path;   
             }
             
             function hitTarget(bullet){
@@ -217,7 +224,7 @@
                 var deleteIndex = 0;
                 message.text = targets.length;
                 targets.forEach(function(target){
-                    if((bullet.y  + bullet.width) > target.y && 
+                    if((bullet.y  + bullet.height) > target.y && 
                         bullet.y < (target.y + target.height) && 
                         (bullet.x + bullet.width) > target.x && 
                         bullet.x < (target.x + target.width)){
@@ -229,57 +236,70 @@
                 });
             }
 
-            
+            function hitBox(bullet){
+                boxes.forEach(function(box){
+                    
+                    
+                    if((bullet.y  + bullet.height) > box.ypos && 
+                        bullet.y < (box.ypos + box.height) && 
+                        (bullet.x + bullet.width) > box.xpos && 
+                        bullet.x < (box.xpos + box.width)){
+                            console.log("leftbulletx: " + bullet.x);
+
+                            var vectorX = (bullet.x + Math.abs(bullet.width / 2)) - (box.xpos + Math.abs(box.width / 2));
+                            var vectorY = (bullet.y + Math.abs(bullet.height / 2) ) - Math.abs(box.ypos + (box.height / 2));
+
+                            var totalHalfWidth = Math.abs(bullet.width / 2) + Math.abs(box.width / 2);
+                            var totalHalfHeight = Math.abs(bullet.height / 2) + Math.abs(box.height / 2);
+                            // console.log("bullet:" + ((bullet.width / 2)) + " box: "+ ((box.width / 2) ));
+                            
+                            debugger;
+                            
+                            var overlapX = totalHalfWidth - Math.abs(vectorX);
+                            var overlapY =  totalHalfHeight - Math.abs(vectorY);
+                            debugger;
+
+                            if(overlapX >= overlapY){
+                                if(vectorY > 0){
+                                    console.log("top");
+                                }else{
+                                    console.log("bottom");
+                                    
+                                }
+                                    bullet.yv *= -1;
+                                
+                            }
+                            else{
+                                if(vectorX > 0){
+                                    console.log("left");
+                                }else{
+                                    console.log("right");
+                                    bullet.x -= overlapX;
+                                    
+                                }
+                                    bullet.xv *= -1;
+                            }
+                            debugger;
+
+                
+                            
+                            // console.log("hitbox");
+                    }
+                });
+            }
             
            
 
             function hitWall(bullet) {
-                var hit = false;
                 if(bullet.x < 10 || bullet.x > 492){
                     bullet.bounce--;
                     bullet.xv *= -1;
-                    // hit = true;
                 }
                 if(bullet.y < 10 || bullet.y > 512){
                     bullet.bounce--;
                     bullet.yv *= -1;
-                    // hit = true;
                 }         
             }
-            // function bulletPath(angle, trace){
-            //     trace.clear();
-            //     var toDegree = angle * 180 / Math.PI;
-            //     var rad = ((90 * Math.PI) / 180);                
-            //     trace.lineStyle(2,0xFF0000,1);
-            //     trace.moveTo(256,512);
-
-            //     var x2;
-
-                
-                
-
-            //     var pathToSides = Math.sqrt(((Math.pow(246, 2)) + (Math.pow(246 * Math.tan(angle), 2))));
-            //     var pathToTop = Math.sqrt(Math.pow(512, 2) + (Math.pow(512 / Math.tan(angle), 2)));
-
-
-            //     if(toDegree > 64 && toDegree < 116){
-            //         trace.lineTo(256 - (pathToTop * Math.cos(angle)) , 10);
-                    
-            //     }else if(angle > 2){
-            //         trace.lineTo(256 - (pathToSides * Math.cos(angle)) , 512 - (pathToSides * Math.sin(angle)));
-            //         x2 = (512 -   (pathToSides * Math.sin(angle))) * Math.tan(rad - angle);
-            //         trace.lineTo(502  +  x2, 10 );
-            //         var x3 = 512 + (502 + x2)  * Math.tan(angle) ;
-            //         trace.lineTo(10 ,512 - x3);
-            //         message.text =512 + (502 + x2)  * Math.tan(angle) ;
-            //     }else{
-            //         trace.lineTo(256 - (pathToSides * Math.cos(angle)) , 512 - (pathToSides * Math.sin(angle)));
-            //         x2 = (512 - (pathToSides * Math.sin(angle))) * Math.tan(rad - angle);
-            //         trace.lineTo(( 512 - (pathToSides * Math.sin(angle))) * Math.tan(rad - angle), 10 );
-            //         trace.lineTo(502 , (512 - x2)  * Math.tan(angle) );
-            //         message.text = angle;
-            //     }
-            // }
             
         </script>
     </body>
