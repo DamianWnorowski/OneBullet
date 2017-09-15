@@ -21,13 +21,6 @@
                 Graphics = PIXI.Graphics,
                 Sprite = PIXI.Sprite;
         
-            var bullet = {
-                x:0,
-                y:0,
-                xv:1,
-                yv:1,
-                bounce: 0
-            };
             
             var message = new Text("heesdfsdflo", {fontFamily: "Arial", fontSize: 32, fill: "white"}
             );
@@ -97,7 +90,7 @@
                 document.body.addEventListener("mousemove", function (e){
 
                     angleGun = (Math.atan2((512 - e.clientY) ,(256 - e.clientX )));
-                    path =  new createPath(256, 512, angleGun, 10);
+                    path =  new createPath(256, 512, angleGun, 10, 10,10);
                     path = getPathHits(path);
                     tracePath.clear();
                     tracePath.lineStyle(2, 0xFF0000, 1);
@@ -160,7 +153,6 @@
                 var target = new Sprite(resources["mario.png"].texture);
                 target.x = x;
                 target.y = y;
-                console.log("mnari: " + target.height);
                 targets.push(target);
                 stage.addChild(target);
             }
@@ -174,7 +166,6 @@
                     if(bullet.bounce > 0){
                         bullet.x -= (10 * bullet.xv);
                         bullet.y -= (10 * bullet.yv);
-                        
                     }else{
                         bullet.clear();
                     }
@@ -182,9 +173,11 @@
                 renderer.render(stage); 
             }
 
-            function createPath(xpos, ypos, angle, bounce){
+            function createPath(xpos, ypos, angle, bounce, width, height){
                 this.xpos = xpos;
                 this.ypos = ypos;
+                this.bulletWidth = width;
+                this.bulletHeight = height;
                 this.xv = Math.cos(angle);
                 this.yv = Math.sin(angle);
                 this.angle = angle;
@@ -202,9 +195,8 @@
                             ypos: path.ypos
                         }
                         path.cords.push(cord);
-                         hit = true;
                     }
-                    if(path.ypos < 10 || path.ypos > 512){
+                    else if(path.ypos < 10 || path.ypos > 512){
                         path.bounce--;
                         path.yv *= -1;  
                         var cord = {
@@ -212,9 +204,59 @@
                             ypos: path.ypos
                         }
                         path.cords.push(cord);             
-                    } 
-                    path.xpos -= (1 * path.xv); 
-                    path.ypos -= (1 * path.yv);             
+                    }else{
+                        boxes.forEach(function(box){
+                            //Check if there a collision happening
+                            if((path.ypos + path.bulletHeight) > box.ypos && 
+                                path.ypos < (box.ypos + box.height) && 
+                                (path.xpos + path.bulletWidth) > box.xpos && 
+                                path.xpos < (box.xpos + box.width)){
+                                
+                                //Find axis of collision
+                                var vectorX = (path.xpos + Math.abs(path.bulletWidth / 2)) - (box.xpos + Math.abs(box.width / 2));
+                                var vectorY = (path.ypos + Math.abs(path.bulletHeight / 2)) - Math.abs(box.ypos + (box.height / 2));
+                                var totalHalfWidth = Math.abs(path.bulletWidth / 2) + Math.abs(box.width / 2);
+                                var totalHalfHeight = Math.abs(path.bulletHeight /2 ) +  Math.abs(box.height / 2);
+                                var overlapX = totalHalfWidth - Math.abs(vectorX);
+                                var overlapY =  totalHalfHeight - Math.abs(vectorY);
+
+                                //Collsion on Top/Bottom
+                                if(overlapX >= overlapY){
+                                    if(vectorY > 0){
+                                        path.ypos += overlapY;
+                                        
+                                    }else{
+                                        path.ypos -= overlapY;
+                                        
+                                    }
+                                    path.yv *= -1;
+                                    var cord = {
+                                        xpos: path.xpos,
+                                        ypos: path.ypos
+                                    }
+                                    path.cords.push(cord); 
+                                }
+                                //Collsion on Left/Right
+                                else{
+                                    if(vectorX > 0){
+                                        path.xpos += overlapX;
+                                    }else{
+                                        path.xpos -= overlapX;
+                                    }
+                                    path.xv *= -1;
+                                    var cord = {
+                                        xpos: path.xpos,
+                                        ypos: path.ypos
+                                    }
+                                    path.cords.push(cord); 
+                                }
+                                path.bounce--;
+                                
+                            }
+                        });
+                    }
+                    path.xpos -= (10 * path.xv); 
+                    path.ypos -= (10 * path.yv);             
                 }
                 return path;   
             }
@@ -236,59 +278,47 @@
                 });
             }
 
+            
+
             function hitBox(bullet){
                 boxes.forEach(function(box){
-                    
-                    
+                    //Check for collision
                     if((bullet.y  + bullet.height) > box.ypos && 
                         bullet.y < (box.ypos + box.height) && 
                         (bullet.x + bullet.width) > box.xpos && 
                         bullet.x < (box.xpos + box.width)){
-                            console.log("leftbulletx: " + bullet.x);
-
+                            //Find axis of collision
                             var vectorX = (bullet.x + Math.abs(bullet.width / 2)) - (box.xpos + Math.abs(box.width / 2));
                             var vectorY = (bullet.y + Math.abs(bullet.height / 2) ) - Math.abs(box.ypos + (box.height / 2));
-
                             var totalHalfWidth = Math.abs(bullet.width / 2) + Math.abs(box.width / 2);
                             var totalHalfHeight = Math.abs(bullet.height / 2) + Math.abs(box.height / 2);
-                            // console.log("bullet:" + ((bullet.width / 2)) + " box: "+ ((box.width / 2) ));
-                            
-                            debugger;
-                            
                             var overlapX = totalHalfWidth - Math.abs(vectorX);
                             var overlapY =  totalHalfHeight - Math.abs(vectorY);
-                            debugger;
 
+                            //Collsion on Top/Bottom
                             if(overlapX >= overlapY){
                                 if(vectorY > 0){
-                                    console.log("top");
-                                }else{
-                                    console.log("bottom");
+                                    bullet.y += overlapY;
                                     
+                                }else{
+                                    bullet.y -= overlapY;
                                 }
                                     bullet.yv *= -1;
-                                
                             }
+                            //Collision on left/right
                             else{
                                 if(vectorX > 0){
-                                    console.log("left");
-                                }else{
-                                    console.log("right");
-                                    bullet.x -= overlapX;
+                                    bullet.x += overlapX;
                                     
+                                }else{
+                                    bullet.x -= overlapX;
                                 }
                                     bullet.xv *= -1;
                             }
-                            debugger;
-
-                
-                            
-                            // console.log("hitbox");
+                        bullet.bounce--;
                     }
                 });
             }
-            
-           
 
             function hitWall(bullet) {
                 if(bullet.x < 10 || bullet.x > 492){
