@@ -41,12 +41,16 @@
                 gameBorder = 10,
                 bulletSpeed = 10,
                 bulletBounce = 10,
-                bulletHeight = 30,
+                bulletHeight = 10,
                 bulletWidth = 10,
                 wallWidth = 50,
                 wallHeight = 50,
+                numWalls = 3,
                 stage = new Container(),
                 renderer = autoDetectRenderer(gameWidth,gameHeight + gameInfo);
+
+            var newLevel = createLevel(10,10,10,10,50,50, 3);
+            
             
             document.body.appendChild(renderer.view);
             
@@ -70,7 +74,7 @@
                 gun.moveTo(256,520);
                 gun.lineTo(256,482);
 
-                createWalls(3);
+                createWalls(numWalls);
                 var random_angle = 0;
                 while(targets.length < 5 || targetQuad() == false || checkIfPixelPerfect(random_angle) == false){
                     targets = [];
@@ -100,7 +104,7 @@
                     gun.clear(); 
                     gun.lineStyle(10,0xFFFFFF,1);
                     gun.moveTo(256,520);
-                    gun.lineTo(256 - (30 * Math.cos(angleGun)) , 512 - (30 * Math.sin(angleGun))); 
+                    gun.lineTo((gameWidth / 2) - (30 * Math.cos(angleGun)) , gameHeight - (30 * Math.sin(angleGun))); 
 
                 });
                 
@@ -136,6 +140,16 @@
                 bullet.bounce = bulletBounce;
                 bullet.endFill();
                 return bullet;
+            }
+
+            function createLevel(bulletSpeed, bulletBounce, bulletHeight, bulletWidth, wallWidth, wallHeight, numWalls, numTargets){
+                this.bulletSpeed = bulletSpeed;
+                this.bulletBounce = bulletBounce;
+                this.bulletHeight = bulletHeight;
+                this.bulletWidth = bulletWidth;
+                this.wallWidth = wallWidth;
+                this.wallHeight = wallHeight;
+                this.numWalls = numWalls;
             }
 
             function createWalls(numWalls){
