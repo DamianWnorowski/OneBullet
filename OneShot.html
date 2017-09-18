@@ -87,18 +87,15 @@
                 gun.lineTo(256,482);
 
                 createWalls(3);
-                createTargets();
+                while(targets.length != 5){
+                    targets = [];
+                    createTargets();
+                }
+                targets.forEach(function(target){
+                    stage.addChild(target);
+                });
+                
 
-                // createWall(100,75,50,50);
-                // createWall(250,75,50,50);
-                // createWall(400,75,50,50);
-                // createWall(50,256,50,50);
-                // createWall(200,256,50,50);
-                // createWall(350,256,50,50);
-                // createWall(120,375,50,50);
-                // // createWalls(350,350,50,50);
-                createTarget(50,50);
-                createTarget(450,450);
 
 
                 document.body.addEventListener("mousemove", function (e){
@@ -153,23 +150,21 @@
             }
 
             function createWalls(numWalls){
-                debugger;
                 var xsplit = gameWidth / numWalls,
-                    ysplit = (gameHeight - 60) / numWalls,
+                    ysplit = (gameHeight - 100) / numWalls,
                     xPad = xsplit - wallWidth,
                     yPad = ysplit - wallHeight;
                 
                 for(var i = 0; i < numWalls; i++){
                     for(var j = 0; j < numWalls; j++){
-                        debugger;
                         var randx = Math.floor(Math.random() * xPad) + 1;
-                        var randy = Math.floor(Math.random() * yPad) + 1; 
-                        createWall((i*xsplit) + randx , (j * ysplit) + randy, wallWidth, wallHeight);
-
+                        var randy = Math.floor(Math.random() * yPad) + 1;
+                        console.log("i:" + Math.floor(numWalls/2));
+                        if(!((i == Math.floor(numWalls/2)) && j == Math.ceil(numWalls / 2))){ 
+                            createWall((i*xsplit) + randx , (j * ysplit) + randy, wallWidth, wallHeight);
+                        }
                     }
                 }
-
-
             }
             
 
@@ -190,12 +185,44 @@
                 message.text = randAngle;
                 var targetPath =  new createPath((gameWidth / 2), gameHeight, randAngle, bulletBounce, 10, 10, bulletSpeed);
                 targetPath = getPathHits(targetPath);
-                // tracePath.clear();
-                // tracePath.lineStyle(2, 0xFF0000, 1);
-                // tracePath.moveTo((gameWidth / 2),gameHeight);
+
+                var startx = gameWidth / 2;
+                var starty = gameHeight;
                 targetPath.cords.forEach(function(cord){ 
-                    console.log("x: " + cord.xpos + " y: " + cord.ypos)
-                    // tracePath.lineTo(cord.xpos, cord.ypos);
+                    var pathWidth = Math.abs(startx - cord.xpos),
+                        pathHeight = Math.abs(starty - cord.ypos);
+                        
+                    var testx, texty;
+                    var foundPos = false;
+                    var loopCount = 0;
+
+                    while(foundPos == false && loopCount < 50){
+                        var randx = Math.floor(Math.random() * pathWidth) + 1,
+                            randy = Math.floor(Math.random() * pathHeight) + 1;
+                        if(startx > cord.xpos){
+                            testx = cord.xpos - randx;
+                        }else{
+                            testx = cord.xpos + randx;
+                        }
+                        if(starty > cord.ypos){
+                            testy = cord.ypos - randy;
+                        }else{
+                            testy = cord.ypos + randy;
+                        }
+                        var target = new Sprite(resources["mario2.png"].texture);
+                            target.x = testx;
+                            target.y = testy;
+                        debugger;
+                        if(!hitTargetOnPath(target)){
+                            targets.push(target);
+                            
+                            foundPos = true;
+                        }else{
+                            loopCount++;
+                        }
+                    }
+                    startx = cord.xpos;
+                    starty = cord.ypos;
                 });
             }
 
@@ -337,6 +364,34 @@
                         deleteIndex++;
                     }
                 });
+            }
+
+            function hitTargetOnPath(target){
+                var hit = false;
+                boxes.forEach(function(box){
+                    if(target.x < gameBorder || (target.x + target.width) > (gameWidth - gameBorder)){
+                        hit =  true;
+                    }
+                    if(target.y < gameBorder || (target.y + target.height)  > gameHeight){
+                        hit =  true;
+                    }
+                    //Check if there a collision happening
+                    if((target.y + target.height) > box.ypos && 
+                        target.y < (box.ypos + box.height) && 
+                        (target.x + target.width) > box.xpos && 
+                        target.x < (box.xpos + box.width)){
+                            hit = true;
+                    }
+                });
+                targets.forEach(function(target2){
+                    if((target.y + target.height) > target2.y && 
+                    target.y < (target2.y + target2.height) && 
+                    (target.x + target.width) > target2.x && 
+                    target.x < (target2.x + target2.width)){
+                            hit = true;
+                    }
+                });
+                return hit;
             } 
 
             function hitBox(bullet){
