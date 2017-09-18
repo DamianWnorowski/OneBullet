@@ -37,6 +37,7 @@
                 angleGun,
                 gameWidth = 512,
                 gameHeight = 512,
+                gameInfo = 50,
                 gameBorder = 10,
                 bulletSpeed = 10,
                 bulletBounce = 10,
@@ -45,7 +46,7 @@
                 wallWidth = 50,
                 wallHeight = 50,
                 stage = new Container(),
-                renderer = autoDetectRenderer(512,512 + 30);
+                renderer = autoDetectRenderer(gameWidth,gameHeight + gameInfo);
             
             document.body.appendChild(renderer.view);
             
@@ -54,34 +55,16 @@
                 .load(setup);
 
             function setup(){
-                var leftWall = new Graphics(),
-                    topWall = new Graphics(),
-                    rightWall = new Graphics(),
-                    bottomWall = new Graphics(),
-                    tracePath = new Graphics(),
+                var tracePath = new Graphics(),
+                    gamebox = new Graphics(),
                     gun = new Graphics();
 
                 var path;
-                
-                leftWall.beginFill(0x66CCFF);
-                leftWall.drawRect(0,0,10,512);
-                leftWall.endFill();
 
-                
-                rightWall.beginFill(0x66CCFF);
-                rightWall.drawRect(502,0,10,512);
-                rightWall.endFill();
-                
-                topWall.beginFill(0x66CCFF);
-                topWall.drawRect(0,0,512,10);
-                topWall.endFill();
-                topWall.xpos = 0;
-                topWall.ypos = 0;
-                
-                bottomWall.beginFill(0x66CCFF);
-                bottomWall.drawRect(0,510,512,2);
-                bottomWall.endFill();
-
+                gamebox.beginFill(0x5B5C5C);
+                gamebox.drawRect(gameBorder, gameBorder, gameWidth - gameBorder * 2, gameHeight - gameBorder );
+                gamebox.endFill();
+                stage.addChild(gamebox);
                 
                 gun.lineStyle(10,0xFFFFFF,1);
                 gun.moveTo(256,520);
@@ -122,18 +105,17 @@
                 });
                 
                 document.body.addEventListener("click", function (e){
-                    if(bullets.length == 0){
-                        var angleBullet = (Math.atan2((gameHeight - e.clientY) ,((gameWidth / 2) - e.clientX )));
-                        var bullet = createBullet(angleBullet);
-                        bullets.push(bullet);
-                        stage.addChild(bullet);
+                    console.log("y: " + e.clientY);
+                    if(e.clientY < 512){
+                        if(bullets.length == 0){
+                            var angleBullet = (Math.atan2((gameHeight - e.clientY) ,((gameWidth / 2) - e.clientX )));
+                            var bullet = createBullet(angleBullet);
+                            bullets.push(bullet);
+                            stage.addChild(bullet);
+                        }
                     }
                 });
 
-                stage.addChild(leftWall);
-                stage.addChild(rightWall);
-                stage.addChild(topWall);
-                stage.addChild(bottomWall);
                 stage.addChild(gun);
                 stage.addChild(message);
                 stage.addChild(tracePath);
@@ -166,8 +148,18 @@
                     for(var j = 0; j < numWalls; j++){
                         var randx = Math.floor(Math.random() * xPad) + 1;
                         var randy = Math.floor(Math.random() * yPad) + 1;
-                        console.log("i:" + Math.floor(numWalls/2));
+                        //Dont make wall in front of gun
                         if(!((i == Math.floor(numWalls/2)) && j == Math.ceil(numWalls / 2))){ 
+                            if(((i*xsplit) + randx) < gameBorder){
+                                randx = gameBorder;
+                            }else if(((i*xsplit) + randx + wallWidth) > (gameWidth - gameBorder)){
+                                randx = gameWidth - gameBorder;
+                            }
+                            if(((j * ysplit) + randy) < gameBorder){
+                                randy = gameBorder;
+                            }else if(((j * ysplit) + randy + wallHeight) > (gameHeight - gameBorder)){
+                                randy = gameHeight - gameBorder;
+                            }
                             createWall((i*xsplit) + randx , (j * ysplit) + randy, wallWidth, wallHeight);
                         }
                     }
@@ -188,6 +180,7 @@
             }
 
             function createTargets(){
+                //Convert random angle to rad
                 var randAngle = (Math.floor(Math.random() * 175) + 1) * Math.PI / 180;
                 targetPath =  new createPath((gameWidth / 2), gameHeight, randAngle, bulletBounce, 10, 10, bulletSpeed);
                 targetPath = getPathHits(targetPath);
@@ -202,6 +195,7 @@
                     var foundPos = false;
                     var loopCount = 0;
 
+                    //Find and create location of target
                     while(foundPos == false && loopCount < 50){
                         var randx = Math.floor(Math.random() * pathWidth) + 1,
                             randy = Math.floor(Math.random() * pathHeight) + 1,
@@ -230,20 +224,26 @@
                     startx = cord.xpos;
                     starty = cord.ypos;
                 });
-                // if(targets.length == 5){
-                    tpath.clear();
-                    tpath.lineStyle(2, 0x0000FF, 1);
-                    tpath.moveTo((gameWidth / 2),gameHeight);
-                    targetPath.cords.forEach(function(cord){
-                        tpath.lineTo(cord.xpos, cord.ypos);
-                    });
-                    stage.addChild(tpath);
-                // }
+                
+                drawAnswer();
+
                 return randAngle;
             }
 
+            function drawAnswer(){
+                tpath.clear();
+                tpath.lineStyle(2, 0x0000FF, 1);
+                tpath.moveTo((gameWidth / 2),gameHeight);
+                targetPath.cords.forEach(function(cord){
+                    tpath.lineTo(cord.xpos, cord.ypos);
+                });
+                stage.addChild(tpath);
+            }
+
+            //Change padding of answer
             function checkIfPixelPerfect(random_angle){
                 debugger;
+                //Add angle difference to answer
                 var addAngle = .5 * Math.PI / 180 
                 var bullet = createBullet(random_angle + addAngle);
                 targetsHit = [];
@@ -272,6 +272,7 @@
                 }
             }
 
+            //Target in all 4 quads
             function targetQuad(){
                 var q1 = false,
                     q2 = false, 
