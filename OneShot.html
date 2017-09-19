@@ -24,7 +24,7 @@
 
 
             
-            var messageBounce, messageScore, tracePath;
+            var messageBounce, messageScore, tracePath, messageTargets;
             
             
             var bullets = [],
@@ -83,6 +83,8 @@
                     buttonScore = new Sprite(resources["button.png"].texture),
                     messageAnswer = new Text("Answer", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
                     buttonAnswer = new Sprite(resources["button.png"].texture);
+                    messageTargets = new Text("Targets: " + targets.length, {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                    buttonTargets = new Sprite(resources["button.png"].texture);
                 var path;
 
                 tracePath = new Graphics();
@@ -94,10 +96,15 @@
                 messageScore.position.set(gameWidth - 127 ,gameHeight +  12);
                 messageSkip.position.set(gameWidth/2 - messageSkip.width/2, gameHeight + 12 + 6);
                 messageAnswer.position.set(gameWidth/2 - messageAnswer.width/2, gameHeight + 60);
+                messageTargets.position.set(gameBorder,gameHeight +  40)
 
                 buttonBounce.x = gameBorder - 6;
                 buttonBounce.y = gameHeight +  12;  
                 buttonBounce.scale.y = 0.5; 
+
+                buttonTargets.x = gameBorder - 6;
+                buttonTargets.y = gameHeight +  40;  
+                buttonTargets.scale.y = 0.5; 
 
 
                 buttonScore.x = gameWidth - 150 - 6;
@@ -185,6 +192,8 @@
                 stage.addChild(messageSkip);
                 stage.addChild(buttonAnswer);
                 stage.addChild(messageAnswer);
+                stage.addChild(buttonTargets);
+                stage.addChild(messageTargets);
 
                 renderer.render(stage);
 
@@ -434,10 +443,13 @@
             
             function gameLoop(){
                 requestAnimationFrame(gameLoop);
+                messageTargets.text = "Targets: " + targets.length;
+                
                 bullets.forEach(function(bullet){
                     hitTarget(bullet);
                     hitBox(bullet);
                     hitWall(bullet);
+                    
                     messageBounce.text = "Bounces: " + bullet.bounce;                       
                     if(bullet.bounce > 0){
                         bullet.x -= (bulletSpeed * bullet.xv);
