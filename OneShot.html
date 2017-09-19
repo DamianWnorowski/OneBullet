@@ -7,7 +7,6 @@
     <title>Hello World</title>
 </head>
     <script src="pixi.min.js"></script>
-    <script src="bump.js"></script>
     <body>
         <script type="text/javascript">
             //Aliases
@@ -25,6 +24,13 @@
             var message = new Text("heesdfsdflo", {fontFamily: "Arial", fontSize: 32, fill: "white"}
             );
             message.position.set(50,256);
+
+            var messageBounce = new Text("Bounces: ", {fontFamily: "Arial", fontSize: 24, fill: "white"}
+            );
+            
+            var messageTargetHit = new Text("Score: 0", {fontFamily: "Arial", fontSize: 24, fill: "white"}
+            );
+            
             
             var bullets = [],
                 boxes = [],
@@ -33,6 +39,7 @@
                 targetsHit = [];   
 
             var state,
+                score = 0,
                 shoot,
                 angleGun,
                 gameWidth = 512,
@@ -50,12 +57,18 @@
                 renderer = autoDetectRenderer(gameWidth,gameHeight + gameInfo);
 
             var newLevel = createLevel(10,10,10,10,50,50, 3);
+
+            messageBounce.position.set(gameBorder,gameHeight + (gameInfo / 2) - 12);            
+            messageBounce.text = "Bounces: " + bulletBounce;         
+
+            messageTargetHit.position.set(gameWidth - 120 ,gameHeight + (gameInfo / 2) - 12);
             
             
             document.body.appendChild(renderer.view);
             
             loader
                 .add("mario2.png")
+                .add("boxsmall.png")
                 .load(setup);
 
             function setup(){
@@ -74,23 +87,10 @@
                 gun.moveTo(256,520);
                 gun.lineTo(256,482);
 
-                createWalls(numWalls);
-                var random_angle = 0;
-                while(targets.length < 5 || targetQuad() == false || checkIfPixelPerfect(random_angle) == false){
-                    targets = [];
-                    random_angle = createTargets();
+                level();
 
-                    
-                }
-                targets.forEach(function(target){
-                    stage.addChild(target);
-                });
                 
-
-
-
                 document.body.addEventListener("mousemove", function (e){
-
                     angleGun = (Math.atan2((gameHeight - e.clientY) ,((gameWidth / 2) - e.clientX )));
                     path =  new createPath((gameWidth / 2), gameHeight, angleGun, bulletBounce, 10, 10, bulletSpeed);
                     path = getPathHits(path);
@@ -123,10 +123,35 @@
                 stage.addChild(gun);
                 stage.addChild(message);
                 stage.addChild(tracePath);
+                stage.addChild(messageBounce);
+                stage.addChild(messageTargetHit);
 
                 renderer.render(stage);
 
                 gameLoop();
+            }
+
+            function level(){
+                boxes.forEach(function(box){
+                    stage.removeChild(box);
+                });
+                stage.removeChild(tpath);
+
+
+                boxes = [];
+                targetPath = [];
+                targetsHit = []; 
+                targets = [];
+
+                createWalls(numWalls);
+                var random_angle = 0;
+                while(targets.length < 5 || targetQuad() == false || checkIfPixelPerfect(random_angle) == false){
+                    targets = [];
+                    random_angle = createTargets();
+                }
+                targets.forEach(function(target){
+                    stage.addChild(target);
+                });
             }
 
             function createBullet(angle){
@@ -181,13 +206,20 @@
             }
             
 
-            function createWall(x,y,w,h){
-                var box = new Graphics();
-                box.beginFill(0xF6CCFF);
-                box.drawRect(x,y,w,h);
-                box.xpos = x;
-                box.ypos = y;
-                box.endFill();
+            function createWall(xloc,yloc,w,h){
+                // var box = new Graphics();
+                // box.beginFill(0xF6CCFF);
+                // box.drawRect(x,y,w,h);
+                // box.xpos = x;
+                // box.ypos = y;
+                // box.endFill();
+
+
+                var box = new Sprite(resources["boxsmall.png"].texture);
+                box.x = xloc;
+                box.y = yloc;
+                box.xpos = xloc;
+                box.ypos = yloc;
 
                 boxes.push(box);
                 stage.addChild(box);
@@ -341,12 +373,11 @@
             
             function gameLoop(){
                 requestAnimationFrame(gameLoop);
-                message.text = targets.length;
-                
                 bullets.forEach(function(bullet){
                     hitTarget(bullet);
                     hitBox(bullet);
                     hitWall(bullet);
+                    messageBounce.text = "Bounces: " + bullet.bounce;                       
                     if(bullet.bounce > 0){
                         bullet.x -= (bulletSpeed * bullet.xv);
                         bullet.y -= (bulletSpeed * bullet.yv);
@@ -354,7 +385,9 @@
                         bullet.clear();
                         bullets.pop();
                         if(targets.length == 0){
-                            message.text = "win";
+                            score++;
+                            level();
+                            messageTargetHit.text = "Score: " + score;
                         }else{
                             targetsHit.forEach(function(target){
                                 targets.push(target);
