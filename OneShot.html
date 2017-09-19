@@ -4,7 +4,7 @@
     
 <head>
     <meta charset="utf-8">
-    <title>Hello World</title>
+    <title>One Bullet</title>
 </head>
     <script src="pixi.min.js"></script>
     <body>
@@ -21,15 +21,10 @@
                 Sprite = PIXI.Sprite;
         
             
-            var message = new Text("heesdfsdflo", {fontFamily: "Arial", fontSize: 32, fill: "white"}
-            );
-            message.position.set(50,256);
 
-            var messageBounce = new Text("Bounces: ", {fontFamily: "Arial", fontSize: 24, fill: "white"}
-            );
+
             
-            var messageTargetHit = new Text("Score: 0", {fontFamily: "Arial", fontSize: 24, fill: "white"}
-            );
+            var messageBounce, messageScore, tracePath;
             
             
             var bullets = [],
@@ -44,10 +39,11 @@
                 angleGun,
                 gameWidth = 512,
                 gameHeight = 512,
-                gameInfo = 50,
+                gameInfo = 100,
                 gameBorder = 10,
                 bulletSpeed = 10,
-                bulletBounce = 10,
+                bulletBounce = 6,
+                minTargets= 4,
                 bulletHeight = 10,
                 bulletWidth = 10,
                 wallWidth = 50,
@@ -56,31 +52,88 @@
                 stage = new Container(),
                 renderer = autoDetectRenderer(gameWidth,gameHeight + gameInfo);
 
-            var newLevel = createLevel(10,10,10,10,50,50, 3);
+                stage.interactive = true;
+                stage.hitArea = new PIXI.Rectangle(0,0,gameWidth, gameHeight+gameInfo);
+                // stage.click = function(mouseData){
+                //     console.log("moving mouse");
+                // }
 
-            messageBounce.position.set(gameBorder,gameHeight + (gameInfo / 2) - 12);            
-            messageBounce.text = "Bounces: " + bulletBounce;         
 
-            messageTargetHit.position.set(gameWidth - 120 ,gameHeight + (gameInfo / 2) - 12);
+            renderer.backgroundColor = 0x0e242d;
+
+            // var newLevel = createLevel(10,10,10,10,50,50, 3);
+
+            
             
             
             document.body.appendChild(renderer.view);
             
             loader
-                .add("mario2.png")
+                .add("button.png")
+                .add("targetsmall.png")
                 .add("boxsmall.png")
                 .load(setup);
 
             function setup(){
-                var tracePath = new Graphics(),
-                    gamebox = new Graphics(),
-                    gun = new Graphics();
-
+                var gamebox = new Graphics(),
+                    gameOutline = new Graphics(),
+                    gun = new Graphics(),
+                    buttonBounce = new Sprite(resources["button.png"].texture),
+                    buttonSkip = new Sprite(resources["button.png"].texture),
+                    buttonScore = new Sprite(resources["button.png"].texture),
+                    messageAnswer = new Text("Answer", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                    buttonAnswer = new Sprite(resources["button.png"].texture);
                 var path;
 
-                gamebox.beginFill(0x5B5C5C);
+                tracePath = new Graphics();
+                messageBounce = new Text("Bounces: "  + bulletBounce, {fontFamily: "Arial", fontSize: 24, fill: "white"});
+                messageScore = new Text("Score: 0", {fontFamily: "Arial", fontSize: 24, fill: "white"});
+                var messageSkip = new Text("Skip", {fontFamily: "Arial", fontSize: 24, fill: "white"});
+
+                messageBounce.position.set(gameBorder,gameHeight +  12);            
+                messageScore.position.set(gameWidth - 127 ,gameHeight +  12);
+                messageSkip.position.set(gameWidth/2 - messageSkip.width/2, gameHeight + 12 + 6);
+                messageAnswer.position.set(gameWidth/2 - messageAnswer.width/2, gameHeight + 60);
+
+                buttonBounce.x = gameBorder - 6;
+                buttonBounce.y = gameHeight +  12;  
+                buttonBounce.scale.y = 0.5; 
+
+
+                buttonScore.x = gameWidth - 150 - 6;
+                buttonScore.y = gameHeight +  12;  
+                buttonScore.scale.y = 0.5;
+
+                buttonSkip.interactive = true;
+                buttonSkip.click = function(mouseData){
+                    skip = true;
+                    level();
+                    messageScore.text = "Score: " + score;
+                    messageBounce.text = "Bounces: " + bulletBounce;
+                }
+
+                buttonAnswer.x = gameWidth/2 - buttonAnswer.width/2;
+                buttonAnswer.y = gameHeight + 55;
+                buttonAnswer.scale.y = 0.8;
+
+                buttonAnswer.interactive = true;
+                buttonAnswer.click = function(mouseData){
+                    drawAnswer();
+                    console.log("ansqewr");
+                }
+
+                buttonSkip.x = gameWidth/2 - buttonSkip.width/2;
+                buttonSkip.y = gameHeight + 12;
+                buttonSkip.scale.y = 0.8;
+
+                gamebox.beginFill(0x23556b);
                 gamebox.drawRect(gameBorder, gameBorder, gameWidth - gameBorder * 2, gameHeight - gameBorder );
                 gamebox.endFill();
+
+                gameOutline.beginFill(0x62cffc);
+                gameOutline.drawRect(gameBorder / 2, gameBorder / 2, gameWidth - gameBorder , gameHeight );
+                gameOutline.endFill();
+                stage.addChild(gameOutline);
                 stage.addChild(gamebox);
                 
                 gun.lineStyle(10,0xFFFFFF,1);
@@ -92,14 +145,17 @@
                 
                 document.body.addEventListener("mousemove", function (e){
                     angleGun = (Math.atan2((gameHeight - e.clientY) ,((gameWidth / 2) - e.clientX )));
-                    path =  new createPath((gameWidth / 2), gameHeight, angleGun, bulletBounce, 10, 10, bulletSpeed);
-                    path = getPathHits(path);
-                    tracePath.clear();
-                    tracePath.lineStyle(2, 0xFF0000, 1);
-                    tracePath.moveTo((gameWidth / 2),gameHeight);
-                    path.cords.forEach(function(cord){
-                        tracePath.lineTo(cord.xpos, cord.ypos);
-                    });
+                    if(tpath.answer){
+                        path =  new createPath((gameWidth / 2), gameHeight, angleGun, bulletBounce, 10, 10, bulletSpeed);
+                        path = getPathHits(path);
+                        tracePath.clear();
+                        tracePath.lineStyle(2, 0xFF0000, 1);
+                        tracePath.moveTo((gameWidth / 2),gameHeight);
+                        path.cords.forEach(function(cord){
+                            tracePath.lineTo(cord.xpos, cord.ypos);
+                        });
+                        stage.addChild(tracePath);
+                    }
 
                     gun.clear(); 
                     gun.lineStyle(10,0xFFFFFF,1);
@@ -121,23 +177,38 @@
                 });
 
                 stage.addChild(gun);
-                stage.addChild(message);
-                stage.addChild(tracePath);
+                stage.addChild(buttonBounce);
                 stage.addChild(messageBounce);
-                stage.addChild(messageTargetHit);
+                stage.addChild(buttonScore);
+                stage.addChild(messageScore);
+                stage.addChild(buttonSkip);
+                stage.addChild(messageSkip);
+                stage.addChild(buttonAnswer);
+                stage.addChild(messageAnswer);
 
                 renderer.render(stage);
 
                 gameLoop();
             }
 
+
+
             function level(){
+                              
                 boxes.forEach(function(box){
                     stage.removeChild(box);
                 });
+                targets.forEach(function(target){
+                    stage.removeChild(target);
+                });
                 stage.removeChild(tpath);
+                tpath.answer = false;
+                stage.removeChild(tracePath);
 
-
+                bullets.forEach(function(bullet){
+                    stage.removeChild(bullet);
+                });
+                bullets = [];
                 boxes = [];
                 targetPath = [];
                 targetsHit = []; 
@@ -145,7 +216,7 @@
 
                 createWalls(numWalls);
                 var random_angle = 0;
-                while(targets.length < 5 || targetQuad() == false || checkIfPixelPerfect(random_angle) == false){
+                while(targets.length < minTargets || targetQuad() == false || checkIfPixelPerfect(random_angle) == false){
                     targets = [];
                     random_angle = createTargets();
                 }
@@ -207,14 +278,6 @@
             
 
             function createWall(xloc,yloc,w,h){
-                // var box = new Graphics();
-                // box.beginFill(0xF6CCFF);
-                // box.drawRect(x,y,w,h);
-                // box.xpos = x;
-                // box.ypos = y;
-                // box.endFill();
-
-
                 var box = new Sprite(resources["boxsmall.png"].texture);
                 box.x = xloc;
                 box.y = yloc;
@@ -245,7 +308,7 @@
                     while(foundPos == false && loopCount < 50){
                         var randx = Math.floor(Math.random() * pathWidth) + 1,
                             randy = Math.floor(Math.random() * pathHeight) + 1,
-                            target = new Sprite(resources["mario2.png"].texture);
+                            target = new Sprite(resources["targetsmall.png"].texture);
 
                         var m = (pathHeight/pathWidth),
                             b = cord.ypos - (m * cord.xpos),
@@ -270,14 +333,12 @@
                     startx = cord.xpos;
                     starty = cord.ypos;
                 });
-                
-                drawAnswer();
-
                 return randAngle;
             }
 
             function drawAnswer(){
                 tpath.clear();
+                tpath.answer = true;
                 tpath.lineStyle(2, 0x0000FF, 1);
                 tpath.moveTo((gameWidth / 2),gameHeight);
                 targetPath.cords.forEach(function(cord){
@@ -353,7 +414,7 @@
                 
 
 
-                if(quad > 3){
+                if(quad >= minTargets || quad > 3){
                     return true;
                 }else{
                     return false;
@@ -364,7 +425,7 @@
             }
 
             function createTarget(x ,y){   
-                var target = new Sprite(resources["mario2.png"].texture);
+                var target = new Sprite(resources["targetsmall.png"].texture);
                 target.x = x;
                 target.y = y;
                 targets.push(target);
@@ -385,9 +446,12 @@
                         bullet.clear();
                         bullets.pop();
                         if(targets.length == 0){
-                            score++;
+                            if(!tpath.answer){
+                                score++;  
+                            }
                             level();
-                            messageTargetHit.text = "Score: " + score;
+                            messageScore.text = "Score: " + score;
+                            messageBounce.text = "Bounces: " + bulletBounce;
                         }else{
                             targetsHit.forEach(function(target){
                                 targets.push(target);
@@ -414,6 +478,7 @@
             }
             
             function getPathHits(path){
+                console.log("bouncesss: " + path.bounce);
                 while(path.bounce > 0){
                     if(path.xpos < gameBorder || (path.xpos + path.bulletWidth) > (gameWidth - gameBorder)){
                         path.bounce--;
