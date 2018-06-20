@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <title>One Bullet</title>
 </head>
-    <script src="pixi.min.js"></script>
+    <script src="pixi.min.js"></script>  
     <body>
         <script type="text/javascript">
             //Aliases
@@ -19,14 +19,9 @@
                 Text = PIXI.Text,
                 Graphics = PIXI.Graphics,
                 Sprite = PIXI.Sprite;
-        
-            
+       
+            var messageBounce, messageScore, tracePath, messageTargets, timeText, gameoverText;
 
-
-            
-            var messageBounce, messageScore, tracePath, messageTargets;
-            
-            
             var bullets = [],
                 boxes = [],
                 targets = [],
@@ -34,6 +29,9 @@
                 targetsHit = [];   
 
             var state,
+                timerCount,
+                timeElapsed = 30,
+                time = timeElapsed,
                 score = 0,
                 shoot,
                 angleGun,
@@ -43,18 +41,29 @@
                 gameBorder = 10,
                 bulletSpeed = 10,
                 bulletBounce = 6,
-                minTargets= 4,
+                minTargets= 1,
                 bulletHeight = 10,
                 bulletWidth = 10,
                 wallWidth = 50,
                 wallHeight = 50,
-                numWalls = 3,
+                numWalls = 2,
+                stopTime = false,
+                numRows = 1;
                 stage = new Container(),
                 stageSettings = new Container(),
+                menuStage = new Container(),
                 renderer = autoDetectRenderer(gameWidth,gameHeight + gameInfo);
+
+            
 
                 stage.interactive = true;
                 stage.hitArea = new PIXI.Rectangle(0,0,gameWidth, gameHeight+gameInfo);
+
+                stageSettings.interactive = true;
+                stageSettings.hitArea = new PIXI.Rectangle(0,0,gameWidth, gameHeight+gameInfo);
+
+                menuStage.interactive=true;
+                menuStage.hitArea = new PIXI.Rectangle(0,0,gameWidth, gameHeight+gameInfo);
                 // stage.click = function(mouseData){
                 //     console.log("moving mouse");
                 // }
@@ -67,7 +76,8 @@
                 .add("button.png")
                 .add("targetsmall.png")
                 .add("boxsmall.png")
-                .load(setup);
+                .add("gun1.png")
+                .load(mainMenu);
 
             function setup(){
                 var gamebox = new Graphics(),
@@ -79,22 +89,27 @@
                     messageAnswer = new Text("Answer", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
                     buttonAnswer = new Sprite(resources["button.png"].texture),
                     buttonTargets = new Sprite(resources["button.png"].texture),
-                    messageSettings = new Text("Settings", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
-                    buttonSettings = new Sprite(resources["button.png"].texture);
-                var path;
-
+                    messageMainMenu = new Text("Main Menu", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                    buttonMainMenu = new Sprite(resources["button.png"].texture),
+                    lazerGun = new Sprite(resources["gun1.png"].texture);
+                    
+                var path, pathAim, tracePathAim;
+                state = play;
                 tracePath = new Graphics();
+                tracePathAim = new Graphics();
                 messageTargets = new Text("Targets: " + targets.length, {fontFamily: "Arial", fontSize: 24, fill: "white"});                
                 messageBounce = new Text("Bounces: "  + bulletBounce, {fontFamily: "Arial", fontSize: 24, fill: "white"});
-                messageScore = new Text("Score: 0", {fontFamily: "Arial", fontSize: 24, fill: "white"});
+                messageScore = new Text("Score:" + score, {fontFamily: "Arial", fontSize: 24, fill: "white"});
+                timeText = new Text("Time: " + time, {fontFamily: "Arial", fontSize: 24, fill: "white"});
                 var messageSkip = new Text("Skip", {fontFamily: "Arial", fontSize: 24, fill: "white"});
 
+                timeText.position.set(gameWidth - 127, gameHeight - 24);
                 messageBounce.position.set(gameBorder,gameHeight +  12);            
                 messageScore.position.set(gameWidth - 127 ,gameHeight +  12);
                 messageSkip.position.set(gameWidth/2 - messageSkip.width/2, gameHeight + 12 + 6);
                 messageAnswer.position.set(gameWidth/2 - messageAnswer.width/2, gameHeight + 60);
                 messageTargets.position.set(gameBorder,gameHeight +  40);
-                messageSettings.position.set(gameWidth - 127 ,gameHeight +  40);
+                messageMainMenu.position.set(gameWidth - 137 ,gameHeight +  40);
 
                 buttonBounce.x = gameBorder - 6;
                 buttonBounce.y = gameHeight +  12;  
@@ -109,13 +124,18 @@
                 buttonScore.y = gameHeight +  12;  
                 buttonScore.scale.y = 0.5;
 
-                buttonSettings.x = gameWidth - 150 - 6;
-                buttonSettings.y = gameHeight +  40;  
-                buttonSettings.scale.y = 0.5;
-                buttonSettings.interactive = true;
-                buttonSettings.click = function(mouseData){
+                buttonMainMenu.x = gameWidth - 150 - 6;
+                buttonMainMenu.y = gameHeight +  40;  
+                buttonMainMenu.scale.y = 0.5;
+                buttonMainMenu.interactive = true;
+                buttonMainMenu.click = function(mouseData){
+                    score = 0;
+                    stopTime = true;
                     stage.visible = false;
-                    stageSettings.visible = true;
+                    stageSettings.visible = false;
+                    menuStage.visible = true;
+                    // settingsStage();
+                    state = menuState;
                     console.log("settings");
                 }
 
@@ -150,15 +170,37 @@
                 stage.addChild(gameOutline);
                 stage.addChild(gamebox);
                 
-                gun.lineStyle(10,0xFFFFFF,1);
-                gun.moveTo(256,520);
-                gun.lineTo(256,482);
+                // gun.lineStyle(10,0xFFFFFF,1);
+                // gun.moveTo(256,520);
+                // gun.lineTo(256,482);
 
-                level();
+                lazerGun.x = (gameWidth/2 );
+                lazerGun.y = (gameHeight);
+                lazerGun.anchor.set(.5,1);
+                
+                
+                
+                
+                // settingsStage();
+                // mainMenu();
+                // level();
 
                 
                 document.body.addEventListener("mousemove", function (e){
                     angleGun = (Math.atan2((gameHeight - e.clientY) ,((gameWidth / 2) - e.clientX )));
+                    lazerGun.rotation = Math.atan2((e.clientX - lazerGun.x), (lazerGun.y - e.clientY));
+                    console.log("posx" + lazerGun.x + " posy " + lazerGun.position.y);
+
+                    pathAim =  new createPath((gameWidth / 2), gameHeight, angleGun, 2, 10, 10, bulletSpeed);
+                    pathAim = getPathHits(pathAim);
+                    tracePathAim.clear();
+                    tracePathAim.lineStyle(2, 0xFF0000, 1);
+                    tracePathAim.moveTo((gameWidth / 2),gameHeight);
+                    pathAim.cords.forEach(function(cord){
+                        tracePathAim.lineTo(cord.xpos, cord.ypos);
+                    });
+                    stage.addChild(tracePathAim);
+
                     if(tpath.answer){
                         path =  new createPath((gameWidth / 2), gameHeight, angleGun, bulletBounce, 10, 10, bulletSpeed);
                         path = getPathHits(path);
@@ -171,14 +213,15 @@
                         stage.addChild(tracePath);
                     }
 
-                    gun.clear(); 
-                    gun.lineStyle(10,0xFFFFFF,1);
-                    gun.moveTo(256,520);
-                    gun.lineTo((gameWidth / 2) - (30 * Math.cos(angleGun)) , gameHeight - (30 * Math.sin(angleGun))); 
+                    // gun.clear(); 
+                    // gun.lineStyle(10,0xFFFFFF,1);
+                    // gun.moveTo(256,gameHeight);
+                    // gun.lineTo((gameWidth / 2) - (30 * Math.cos(angleGun)) , gameHeight - (30 * Math.sin(angleGun))); 
 
                 });
                 
                 document.body.addEventListener("click", function (e){
+
                     if(e.clientY < 512){
                         if(bullets.length == 0){
                             var angleBullet = (Math.atan2((gameHeight - e.clientY) ,((gameWidth / 2) - e.clientX )));
@@ -189,7 +232,8 @@
                     }
                 });
 
-                stage.addChild(gun);
+                // stage.addChild(gun);
+                stage.addChild(timeText);
                 stage.addChild(buttonBounce);
                 stage.addChild(messageBounce);
                 stage.addChild(buttonScore);
@@ -200,18 +244,153 @@
                 stage.addChild(messageAnswer);
                 stage.addChild(buttonTargets);
                 stage.addChild(messageTargets);
-                stage.addChild(buttonSettings);
-                stage.addChild(messageSettings);
+                stage.addChild(buttonMainMenu);
+                stage.addChild(messageMainMenu);
+                stage.addChild(lazerGun);
 
-                renderer.render(stage);
-
-                gameLoop();
+                
+                // renderer.render(menuStage);
+                // gameLoop();
             }
 
+            function timeLeft(){
+                timeText.text = "Time: " + (--time);
+                console.log("time: " + time);
+                if(time == -1 || stopTime){
+                    console.log("Game over");
+                    clearInterval(timerCount);
+                    stopTime = false;
+                    time = timeElapsed;
+                    timeText.text = "Time: " + (time);
+                    stage.visible = false;
+                    menuStage.visible = true;
+                    state = gameOverState;
+                    
+                }
+            }
 
+            function mainMenu(){
+                console.log("Main menu");
+                var menuBox = new Graphics(),
+                    menuOutline = new Graphics();
+
+                menuBox.beginFill(0x23556b);
+                menuBox.drawRect(gameBorder, gameBorder, gameWidth - gameBorder * 2, gameHeight  + 80 );
+                menuBox.endFill();
+
+                menuOutline.beginFill(0x62cffc);
+                menuOutline.drawRect(gameBorder / 2, gameBorder / 2, gameWidth - gameBorder , gameHeight + 90);
+                menuOutline.endFill();
+                menuStage.addChild(menuOutline);
+                menuStage.addChild(menuBox);
+
+                var menuPadding = 10;
+        
+                var hardDiff = new Sprite(resources["button.png"].texture),
+                medDiff = new Sprite(resources["button.png"].texture),
+                easyDiff = new Sprite(resources["button.png"].texture),
+                customDiff = new Sprite(resources["button.png"].texture),
+                highScore = new Sprite(resources["button.png"].texture);
+
+                gameoverText = new Text(" ", {fontFamily: "Arial", fontSize: 48, fill: "white"});
+
+                var hardText = new Text("Hard", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                easyText = new Text("Easy", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                medText = new Text("Medium", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                highscoreText = new Text("HighScore", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                customText = new Text("Custom", {fontFamily: "Arial", fontSize: 24, fill: "white"});
+
+                var menuButtonWidth = gameWidth/2-easyDiff.width/2,
+                menuButtonHeight = (gameHeight/3);
+
+                
+                easyDiff.position.set(gameWidth/2-easyDiff.width/2, menuButtonHeight+ (medDiff.height));
+                medDiff.position.set(gameWidth/2-easyDiff.width/2, menuButtonHeight + (medDiff.height * 2) + 10);
+                hardDiff.position.set(gameWidth/2-easyDiff.width/2, menuButtonHeight + (medDiff.height * 3) + 20);
+                customDiff.position.set(gameWidth/2-easyDiff.width/2, menuButtonHeight + (medDiff.height * 4) + 30);
+                highScore.position.set(gameWidth/2-easyDiff.width/2, menuButtonHeight + (medDiff.height * 5) + 40);
+
+                easyText.position.set(gameWidth/2 - easyText.width/2, easyDiff.y + easyText.height/2);
+                medText.position.set(gameWidth/2 - medText.width/2, medDiff.y + medText.height/2);
+                hardText.position.set(gameWidth/2 - hardText.width/2, hardDiff.y + hardText.height/2);
+                highscoreText.position.set(gameWidth/2 - highscoreText.width/2, highScore.y + highscoreText.height/2);
+                customText.position.set(gameWidth/2 - customText.width/2, customDiff.y + customText.height/2);
+
+                settingsStage();
+                setup();
+
+                easyDiff.interactive = true;
+                easyDiff.click = function(mouseData){
+                    console.log("Easy difficulty");
+                    setLevel(3,2,2);
+                }
+                medDiff.interactive = true;
+                medDiff.click = function(mouseData){
+                    console.log("Medium difficulty");
+                    setLevel(6,3,2);
+                }
+                hardDiff.interactive = true;
+                hardDiff.click = function(mouseData){
+                    console.log("Hard difficulty");
+                    setLevel(9,3,3);
+                }
+                customDiff.interactive = true;
+                customDiff.click = function(mouseData){
+                    menuStage.visible = false;
+                    stage.visible = false;
+                    stageSettings.visible = true;
+                    state = changeSettings;
+                    // renderer.render(stageSettings);
+                    console.log("Custome Level");
+                    
+                }
+                highScore.interactive = true;
+                highScore.click = function(mouseData){
+                    console.log("High Score");
+                    
+                }
+
+                menuStage.addChild(easyDiff);
+                menuStage.addChild(medDiff);
+                menuStage.addChild(hardDiff);
+                menuStage.addChild(customDiff);
+                menuStage.addChild(highScore);
+                menuStage.addChild(easyText);
+                menuStage.addChild(medText);
+                menuStage.addChild(hardText);
+                menuStage.addChild(customText);
+                menuStage.addChild(highscoreText);
+                menuStage.addChild(gameoverText);
+
+                state = menuState;
+
+                renderer.render(menuStage);
+                gameLoop();            
+            }
+            function menuState(){
+                renderer.render(menuStage);
+            }
+
+            function gameOverState(){
+                gameoverText.text = "Final Score: "+  score;
+                gameoverText.position.set(gameWidth/2 - gameoverText.width/2, gameHeight/5);
+                renderer.render(menuStage);
+            }
+
+            function setLevel(bounces, walls, rows){
+                timerCount = setInterval(timeLeft,1000);
+                numRows = rows;
+                bulletBounce = bounces;
+                numWalls = walls;
+                level();
+                score = 0;
+                messageScore.text = "Score: " + score;
+                menuStage.visible = false;
+                stage.visible = true;
+                state = play;
+            }
 
             function level(){
-                              
                 boxes.forEach(function(box){
                     stage.removeChild(box);
                 });
@@ -242,6 +421,8 @@
                 });
             }
 
+            
+
             function createBullet(angle){
                 var bullet = new Graphics();
                 bullet.beginFill(0x239569);
@@ -267,16 +448,20 @@
 
             function createWalls(numWalls){
                 var xsplit = gameWidth / numWalls,
-                    ysplit = (gameHeight - 100) / numWalls,
+                    ysplit = (gameHeight - 100) / numRows,
                     xPad = xsplit - wallWidth,
                     yPad = ysplit - wallHeight;
+
+                if(numRows == 1){
+                    ysplit = (gameHeight - 100) / 2;
+                }
                 
                 for(var i = 0; i < numWalls; i++){
-                    for(var j = 0; j < numWalls; j++){
+                    for(var j = 0; j < numRows; j++){
                         var randx = Math.floor(Math.random() * xPad) + 1;
                         var randy = Math.floor(Math.random() * yPad) + 1;
                         //Dont make wall in front of gun
-                        if(!((i == Math.floor(numWalls/2)) && j == Math.ceil(numWalls / 2))){ 
+                        // if(!((i == Math.floor(numWalls/2)) && j == Math.ceil(numWalls / 2))){ 
                             if(((i*xsplit) + randx) < gameBorder){
                                 randx = gameBorder;
                             }else if(((i*xsplit) + randx + wallWidth) > (gameWidth - gameBorder)){
@@ -288,7 +473,7 @@
                                 randy = gameHeight - gameBorder;
                             }
                             createWall((i*xsplit) + randx , (j * ysplit) + randy, wallWidth, wallHeight);
-                        }
+                        // }
                     }
                 } 
             }
@@ -307,6 +492,7 @@
 
             function createTargets(){
                 //Convert random angle to rad
+                console.log("bounces: " + bulletBounce);
                 var randAngle = (Math.floor(Math.random() * 175) + 1) * Math.PI / 180;
                 targetPath =  new createPath((gameWidth / 2), gameHeight, randAngle, bulletBounce, 10, 10, bulletSpeed);
                 targetPath = getPathHits(targetPath);
@@ -322,7 +508,9 @@
                     var loopCount = 0;
 
                     //Find and create location of target
-                    while(foundPos == false && loopCount < 50){
+                    while(foundPos == false && loopCount < 10){
+                        console.log("creating level");
+                        // console.log("loop count: " + loopCount);
                         var randx = Math.floor(Math.random() * pathWidth) + 1,
                             randy = Math.floor(Math.random() * pathHeight) + 1,
                             target = new Sprite(resources["targetsmall.png"].texture);
@@ -364,9 +552,16 @@
                 stage.addChild(tpath);
             }
 
+            function changeMain(){
+                renderer.render(menuStage);
+            }
+
+            function changeSettings(){
+                renderer.render(stageSettings);                
+            }
+
             //Change padding of answer
             function checkIfPixelPerfect(random_angle){
-                debugger;
                 //Add angle difference to answer
                 var addAngle = .5 * Math.PI / 180 
                 var bullet = createBullet(random_angle + addAngle);
@@ -448,10 +643,173 @@
                 targets.push(target);
                 stage.addChild(target);
             }
-            
-            function gameLoop(){
-                requestAnimationFrame(gameLoop);
-                messageTargets.text = "Targets: " + targets.length;
+
+            function settingsStage(){
+                var sDoneText = new Text("Play", {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                    sDoneBox = new Sprite(resources["button.png"].texture),
+                    sRowText = new Text("Rows: " + numRows, {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                    sRowAdd = new Sprite(resources["boxsmall.png"].texture),
+                    sRowSub = new Sprite(resources["boxsmall.png"].texture),
+                    sBounceAdd = new Sprite(resources["boxsmall.png"].texture),
+                    sBounceSub = new Sprite(resources["boxsmall.png"].texture),
+                    sBounceText =  new Text("Bounces: " + bulletBounce, {fontFamily: "Arial", fontSize: 24, fill: "white"}),
+                    sBoxesAdd = new Sprite(resources["boxsmall.png"].texture),
+                    sBoxesSub = new Sprite(resources["boxsmall.png"].texture),
+                    sBoxesText =  new Text("Boxes Per Row: " + numWalls, {fontFamily: "Arial", fontSize: 24, fill: "white"});
+
+
+
+
+                    sBounceText.position.set(gameWidth/2 - sBounceText.width - 20, 100);
+                    sBounceAdd.x = gameWidth/2 + sBounceAdd.width;
+                    sBounceAdd.y = 88;
+                    sBounceAdd.interactive = true;
+                    sBounceAdd.click = function(mouseData){
+                        if(bulletBounce < 10){
+                            if(bulletBounce == 0){
+                                stageSettings.addChild(sBounceSub);
+                            }
+                            bulletBounce++;
+                            sBounceText.text = "Bounces: " + bulletBounce;
+                            if(bulletBounce == 10){
+                                stageSettings.removeChild(sBounceAdd);
+                            }
+                        }
+                        renderer.render(stageSettings);
+                        
+                        
+                    }
+                    sBounceSub.x = gameWidth/2 ;
+                    sBounceSub.y = 88;
+                    sBounceSub.interactive = true;
+                    sBounceSub.click = function(mouseData){
+                        if(bulletBounce > 0){
+                            if(bulletBounce == 10){
+                                stageSettings.addChild(sBounceAdd);
+                            }
+                            bulletBounce--;
+                            sBounceText.text = "Bounces: " + bulletBounce;
+                            console.log("add");
+                            if(bulletBounce == 0){
+                                stageSettings.removeChild(sBounceSub);
+                            }
+                        }
+
+                        renderer.render(stageSettings);
+                        
+                    }
+
+                    sBoxesText.position.set(gameWidth/2 - sBoxesText.width - 20, 200);
+                    sBoxesAdd.x = gameWidth/2 + sBounceAdd.width;
+                    sBoxesAdd.y = 188;
+                    sBoxesAdd.interactive = true;
+                    sBoxesAdd.click = function(mouseData){
+                        if(numWalls < 4){
+                            if(numWalls == 0){
+                                stageSettings.addChild(sBoxesSub);
+                            }
+                            numWalls++;                        
+                            sBoxesText.text = "Boxes Per Row: " + numWalls;
+                            if(numWalls == 4){
+                                stageSettings.removeChild(sBoxesAdd);
+                            }
+                        }
+                        renderer.render(stageSettings);
+                    }
+                    sBoxesSub.x =  gameWidth/2;
+                    sBoxesSub.y = 188;
+                    sBoxesSub.interactive = true;
+                    sBoxesSub.click = function(mouseData){
+                        if(numWalls > 0){ 
+                            if(numWalls == 4){
+                                stageSettings.addChild(sBoxesAdd);
+                            }
+                            numWalls--;
+                            sBoxesText.text = "Boxes Per Row: " + numWalls;
+                            if(numWalls == 0){
+                                stageSettings.removeChild(sBoxesSub);
+                            }
+                        }
+                        renderer.render(stageSettings);
+                    }
+
+                    sRowText.position.set(gameWidth/2 - sRowText.width - 20, 300);
+                    sRowAdd.x = gameWidth/2 + sRowAdd.width;
+                    sRowAdd.y = 288;
+                    sRowAdd.interactive = true;
+                    sRowAdd.click = function(mouseData){
+                        if(numRows < 3){
+                            if(numRows == 1){
+                                stageSettings.addChild(sRowSub);
+                            }
+                            numRows++;
+                            sRowText.text = "Rows: " + numRows;
+                            if(numRows == 3){
+                                stageSettings.removeChild(sRowAdd);
+                            }
+                        }
+                        renderer.render(stageSettings);
+                    }
+                    sRowSub.x =  gameWidth/2;
+                    sRowSub.y = 288;
+                    sRowSub.interactive = true;
+                    sRowSub.click = function(mouseData){
+                        if(numRows > 1){
+                            if(numRows == 3){
+                                stageSettings.addChild(sRowAdd);
+                            }
+                            numRows--;
+                            sRowText.text = "Rows: " + numRows;
+                            if(numRows == 1){
+                                stageSettings.removeChild(sRowSub);
+                            }
+                        }
+                        renderer.render(stageSettings);
+                        
+                    }
+
+                    sDoneText.position.set(gameWidth/2 - sDoneText.width/2,412);
+                    sDoneBox.x = gameWidth/2 - sDoneBox.width/2;
+                    sDoneBox.y = 400;
+                    sDoneBox.interactive = true;
+                    sDoneBox.click = function(mouseData){
+                        stageSettings.visible = false;
+                        menuStage.visible = false;
+                        stage.visible = true;
+                        state = play;
+                        level();
+                    }
+
+                    stageSettings.addChild(sDoneText);
+                    stageSettings.addChild(sDoneBox);
+                    if(bulletBounce > 0){
+                        stageSettings.addChild(sBounceSub);                        
+                    }
+                    if(bulletBounce < 10){
+                        stageSettings.addChild(sBounceAdd);    
+                    }
+                    stageSettings.addChild(sBounceText);
+                    if(numWalls > 0){
+                        stageSettings.addChild(sBoxesSub);
+                    }
+                    if(numWalls < 4){
+                        stageSettings.addChild(sBoxesAdd);
+                    }
+                    stageSettings.addChild(sBoxesText);
+                    stageSettings.addChild(sRowText);
+                    if(numRows > 1){
+                        stageSettings.addChild(sRowSub);
+                        
+                    }
+                    if(numRows < 4){
+                        stageSettings.addChild(sRowAdd);
+                    }
+            }
+
+            function play(){
+                messageTargets.text = "Targets: " + targets.length;       
+                // timeText.text = "Time: " + timeElapsed;
+                // timeElapsed = time++/120;
                 
                 bullets.forEach(function(bullet){
                     hitTarget(bullet);
@@ -467,7 +825,8 @@
                         bullets.pop();
                         if(targets.length == 0){
                             if(!tpath.answer){
-                                score++;  
+                                score += targetsHit.length * boxes.length;
+                                // score++;  
                             }
                             level();
                             messageScore.text = "Score: " + score;
@@ -483,7 +842,14 @@
                         }
                     }
                 });
-                renderer.render(stage); 
+                renderer.render(stage);
+            }
+
+            
+            
+            function gameLoop(){
+                requestAnimationFrame(gameLoop);
+                state();
             }
 
             function createPath(xpos, ypos, angle, bounce, width, height, speed){
